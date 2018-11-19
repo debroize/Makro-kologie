@@ -1,6 +1,9 @@
-#### GBIF und BIOCLIM Daten Vorbereitung zu SDM f?r ...
+#### GBIF und BIOCLIM Daten Vorbereitung zu SDM für ...
 #### Mantis religiosa
 rm(list= ls())
+
+#### Start ####
+start_time <- date()	# Startzeit speichern
 
 ### 0.1- Workspace setzen(Pfad in Zwischenablage) ####
  wdname <- "C:/Users/Denis/Documents/Makrooekologie/Workspace"
@@ -10,14 +13,14 @@ setwd(wdname); getwd(); rm(wdname)
 
 ### 0.2- Notwendige Ordnerstruktur in Working Directory ####
 if("data" %in% list.files() == FALSE){dir.create("data/")}                    ## Daten Ordner
-if("gbif" %in% list.files("data/") == FALSE){dir.create("data/gbif/")}        ## Unterordner f?r GBIF-Daten
-if("bioclim" %in% list.files("data/") == FALSE){dir.create("data/bioclim/")}  ## Unterordner f?r GBIF-Daten
+if("gbif" %in% list.files("data/") == FALSE){dir.create("data/gbif/")}        ## Unterordner für GBIF-Daten
+if("bioclim" %in% list.files("data/") == FALSE){dir.create("data/bioclim/")}  ## Unterordner für GBIF-Daten
 
 
 ### 0.3- Pakete laden  ####
-library(rgbif)                  ## Global Biodiversity Information Facility, Datenbank f?r Artvorkommen
+library(rgbif)                  ## Global Biodiversity Information Facility, Datenbank für Artvorkommen
 library(raster)                 ## Rasterverarbeitung und Bioclim-Daten
-library(dismo)
+library(dismo)                  ## Für MaxEnt-Modellierung
 library(maptools)               ## Für Weltkarten-Polygone
 library(colorRamps)
 library(classInt)
@@ -31,24 +34,24 @@ speciesName <- 'Mantis religiosa'; species <-  gsub(" ","_", speciesName);    ##
 
   bioclimVarAll <- c('tmin', 'tmax', 'prec', 'bio')
   bioclimResAll <- c(0.5, 2.5, 5, 10)
-bioclimVar <- bioclimVarAll[4]                                ## Variablen f?r Bioclim
-bioclimRes <- bioclimResAll[3]                                ## Aufl?sung der Bioclim-Daten (0.5 nur mit Argumenten: lon, lat)
+bioclimVar <- bioclimVarAll[4]                                ## Variablen für Bioclim
+bioclimRes <- bioclimResAll[3]                                ## Auflösung der Bioclim-Daten (0.5 nur mit Argumenten: lon, lat)
   
 regNum <- 150; regnName <- "europe"            ## Region Nummer aus BioClim
-regDel <- "Russia"         ## Name von L?ndern die auseschlossen werden sollen
+regDel <- "Russia"         ## Name von Ländern die auseschlossen werden sollen
 
 rm(bioclimVarAll, bioclimResAll)  
 
 ### 1.1- Rohdaten von GBIF, BioClim und Weltkarte laden, bzw.  downloaden und speichern ####
 ### 1.1.1- Daten von GBIF laden und speichern, bzw. laden ##
-if(paste(species,".rds", sep= "") %in% list.files("data/gbif/")){       ## ?berpr?fen ob Daten schon vorliegen, falls JA -> direkt laden
+if(paste(species,".rds", sep= "") %in% list.files("data/gbif/")){       ## Überprüfen ob Daten schon vorliegen, falls JA -> direkt laden
  
    presences <- readRDS(paste("data/gbif/",species, ".rds", sep= ""))  
 
 }else{
   
   key <- name_suggest(q= speciesName, rank='species')$key[1]
-  n <- occ_count(taxonKey=key, georeferenced=TRUE); n                   ## Anzahl Datenpunkte ?berpr?fen
+  n <- occ_count(taxonKey=key, georeferenced=TRUE); n                   ## Anzahl Datenpunkte überprüfen
   presences <- occ_search(taxonKey=key, limit=n)
   head(presences$data)
   
@@ -79,12 +82,12 @@ projection(wrld_simpl)
 
 
 
-### 1.2- Rohdaten auf relevante Bereiche einschr?nken ####
+### 1.2- Rohdaten auf relevante Bereiche einschränken ####
 ### 1.2.1- Projektion der Daten gleichsetzen ##
 projection(wrld_simpl) <- projection(bioclim)     ## Welkarte auf bioclim beziehen
 
 
-### 1.2.2- Weltkarte auf Region beschr?nken ##
+### 1.2.2- Weltkarte auf Region beschränken ##
 region <- wrld_simpl[wrld_simpl$REGION==regNum,]
   #region@data 
 region <- region[region$NAME!=regDel,]
@@ -92,21 +95,21 @@ region <- region[region$NAME!=regDel,]
   #plot(region)
 rm(regNum, regDel)
 
-### 1.2.3- Punktdaten r?umlich verorten ##
+### 1.2.3- Punktdaten räumlich verorten ##
 presences <- SpatialPoints(presences[,c("decimalLongitude", "decimalLatitude")], proj4string=CRS(projection(bioclim)))
 
   #plot(wrld_simpl)
   #points(decimalLatitude ~ decimalLongitude, data=presences, pch=16, cex=0.5, col="red")
 
 
-### 1.2.4- Datenpunkte auf Region beschr?nken ##
+### 1.2.4- Datenpunkte auf Region beschränken ##
   #presences_region <- presences[is.na(over(region, presences)),]  ### Funktioniert noch nicht (daten werden nict auf europa begrenzt)
 presences_region <- presences[region]
 
   #plot(region)
   #points(presences_region, pch=16, cex=0.5, col="blue")
 
-### 1.2.5- BioClim-Daten auf Region beschr?nken ##
+### 1.2.5- BioClim-Daten auf Region beschränken ##
 bioclim_region <- crop(bioclim, region)
 bioclim_region <- mask(bioclim_region, region)
 
@@ -117,7 +120,7 @@ background <- randomPoints(bioclim_region, 50000)
   #plot(wrld_simpl)
   #points(background, pch=16, cex=0.5, col="blue")
 
-### 1.2.7- ?berpr?fen ob Datenpunkte nur auf Region beschr?nkt sind
+### 1.2.7- Überprüfen ob Datenpunkte nur auf Region beschränkt sind
 x11()
 plot(wrld_simpl)
 points(background, pch=16, cex=0.5, col="blue")
@@ -133,3 +136,6 @@ rawData <- list(species, region, presences_region, background)
   ## Umweltdaten
   saveRDS(bioclim_region, paste("data/bioclim/bioclim_", regnName, "_Var_", bioclimVar, "_Res_", bioclimRes, ".rds", sep = ""))
 
+
+#### Ende ####
+start_time; date()	## Start; und Endzeit abfragen ## Dauer: 

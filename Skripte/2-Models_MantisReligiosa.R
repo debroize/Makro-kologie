@@ -1,9 +1,11 @@
-#### SDM auf Basis von GBIF und BIOCLIM f?r ...
+#### SDM auf Basis von GBIF und BIOCLIM für ...
 #### Mantis religiosa
 #### Modellerstellung
  rm(list = ls())
 
- start_time <- date()	# Startzeit speichern
+#### Start ####
+start_time <- date()	# Startzeit speichern
+ 
 ### 0.1- Workspace setzen(Pfad in Zwischenablage) ####
  wdname <- "C:/Users/Denis/Documents/Makrooekologie/Workspace"
 # wdname <- gsub( "\\\\",  "/",  readClipboard())
@@ -12,28 +14,29 @@ setwd(wdname); getwd(); rm(wdname)
 
 ### 0.2- Notwendige Ordnerstruktur in Working Directory ####
 if("data" %in% list.files() == FALSE){dir.create("data/")}                      ## Daten Ordner
-if("gbif" %in% list.files("data/") == FALSE){dir.create("data/gbif/")}          ## Unterordner f?r GBIF-Daten
-if("bioclim" %in% list.files("data/") == FALSE){dir.create("data/bioclim/")}    ## Unterordner f?r GBIF-Daten
+if("gbif" %in% list.files("data/") == FALSE){dir.create("data/gbif/")}          ## Unterordner für GBIF-Daten
+if("bioclim" %in% list.files("data/") == FALSE){dir.create("data/bioclim/")}    ## Unterordner für Bioclim-Daten
+if("figures" %in% list.files() == FALSE){dir.create("figures/")}                ## Ordner für Grafiken
 if("models" %in% list.files() == FALSE){dir.create("models/")}                  ## Modell Ordner
-if("maxent" %in% list.files("models/") == FALSE){dir.create("models/maxent/")}  ## Unterordner f?r MaxEnt-Modelle
+if("maxent" %in% list.files("models/") == FALSE){dir.create("models/maxent/")}  ## Unterordner für MaxEnt-Modelle
 
 
 ### 0.3- Pakete laden  ####
 library(rgbif)                  ## Global Biodiversity Information Facility, Datenbank f?r Artvorkommen
 library(raster)                 ## Rasterverarbeitung und Bioclim-Daten
-library(dismo)
+library(dismo)                  ## Für MaxEnt-Modellierung
 library(maptools)               ## Für Weltkarten-Polygone
-library(colorRamps)
+library(colorRamps)             
 library(classInt)
-library(rJava)
+library(rJava)                  ## Java Implementierung
 library(MaxentVariableSelection)
-library(corrplot)
+library(corrplot)               
 library(rgdal)
 library(gbm)
 library(hier.part)
 
 ### 1- Daten einlesen + Parameter setzen ####
-## 1.1- Datens?tze einlesen ####
+## 1.1- Datensätze einlesen ####
 ## Artdaten
 specDataReg <- readRDS("data/gbif/Mantis_religiosa_europe_dataset.rds")
 
@@ -62,13 +65,9 @@ rm(specDataReg)
 
 ## 2.1- Mit allen Variablen ####
 meAll <- maxent(enviData, presences_region@coords, background)
+
 # me1Jack <- maxent(enviData, presences_region@coords, background, args= "-J") ### mit Jacknife, Dauer ca. 10min
 
-# Bild abspeichern
-png(paste("data/correlations/MaxEntCont_", species, "europe.png", sep= "_"), pointsize = 16)
-plot(meAll, pch= 16)
-legend("bottomright", legend=c("AUC:", meAll@results[5]))
-dev.off()
 
 ## 2.2- Variablen selektieren ####
 
@@ -77,7 +76,7 @@ dev.off()
 ContAll <- meAll@results[7:(6+length(names(enviData))),1]
 ContAll <- sort(ContAll, decreasing = TRUE)
 
-## Umweltvariablen ausw?hlen deren Bedeutung >= dem 75% Quartil sind ##
+## Umweltvariablen auswählen deren Bedeutung >= dem 75% Quartil sind ##
 ContAll75Quant <- ContAll[ContAll>quantile(ContAll)[4]]
 
 ContImp <- as.character(strsplit(names(ContAll75Quant), ".contribution"))
@@ -106,9 +105,9 @@ for(i in 1:length(ContImp)){
 rm(ContAll, ContAll75Quant)
 # Automatisiert - Ende ###
 
-# 2.2.2- H?ndisch ####
+# 2.2.2- Händisch ####
 envi_1 <- enviData[[c("bio3", "bio15", "bio2")]]      ## bio4 und bio6 entfert: Korrelieren beide mit bio3,
-envi_2 <- enviData[[c(ContImp, "bio18")]]             ## bio18 hinzugenommen weil es bei einzelnem fehlen den gr??ten negativeffekt zeigt
+envi_2 <- enviData[[c(ContImp, "bio18")]]             ## bio18 hinzugenommen weil es bei einzelnem fehlen den größten negativeffekt zeigt
 
 
 
@@ -134,10 +133,10 @@ meImpA5 <- maxent(get(enviImpNamesAsc[5]), presences_region@coords, background) 
 
 meImpA <- list(meImpA1, meImpA2, meImpA3, meImpA4, meImpA5)
 
-# 2.3.2- H?ndische ####
-# Predictoren w?hlen ##
+# 2.3.2- Händische ####
+# Predictoren wählen ##
 envi_1 <- enviData[[c("bio3", "bio15", "bio2")]]      ## bio4 und bio6 entfert: Korrelieren beide mit bio3,
-envi_2 <- enviData[[c(ContImp, "bio18")]]             ## bio18 hinzugenommen weil es bei einzelnem fehlen den gr??ten negativeffekt zeigt
+envi_2 <- enviData[[c(ContImp, "bio18")]]             ## bio18 hinzugenommen weil es bei einzelnem fehlen den größten negativeffekt zeigt
 
 # Modelle erstellen
 me_1 <- maxent(envi_1, presences_region@coords, background)
@@ -149,20 +148,20 @@ rm(envi_1, envi_2)
 
 #### 3- MaxEnt-Modelle abspeichern ####
 
-maxMods <- list(meImpS, meImpA, meM)
+maxMods <- list(meImpS, meImpA, meM, meAll)
 
 saveRDS(maxMods, paste("models/maxent/", species, "_", "europe", "_MaxEntModels.rds", sep= ""))
 
 
 #### 4- Korrelationen der Parameter ####
-### 4.1- Daten an Presence- und Absence-Punkten ausw?hlen ####
+### 4.1- Daten an Presence- und Absence-Punkten auswählen ###
 presvals <- extract(enviData, as.data.frame(presences_region))   
 absvals <- extract(enviData, background)
 head(presvals)
 head(absvals)
 
 
-### 4.2- Datensatz der Predictoren erstellen ####
+### 4.2- Datensatz der Predictoren erstellen ###
 pb <- c(rep(1, nrow(presvals)), rep(0, nrow(absvals)))
 sdmdata <- data.frame(cbind(pb, rbind(presvals, absvals)))
 sdmdata <- na.omit(sdmdata)
@@ -170,7 +169,7 @@ head(sdmdata)                   ## head: gibt die ersten 6 Zeilen wieder
 tail(sdmdata)                   ## tail: gibt die letzten 6 Zeilen wieder  
 na.omit(sdmdata)
 
-### 4.3- Korrelation zwischen verwendeteten Prediktoren ####
+### 4.3- Korrelation zwischen verwendeteten Prediktoren ###
 # Scatterplot
 png(paste("data/correlations/scatter", species, "europe.png", sep= "_"), pointsize = 16)
 pairs(sdmdata[,c(ContImp)], cex=0.1, fig=TRUE)
@@ -180,90 +179,31 @@ png(paste("data/correlations/corplot", species, "europe.png", sep= "_"), pointsi
 corrplot(cor(sdmdata[,c(ContImp)]), type= "lower", diag=FALSE)
 dev.off()
 
+
+#### Ende ####
 start_time; date()	## Start; und Endzeit abfragen ## Dauer: ca. 5 Minuten
 
 
 
-### 2.2- Modell evaluieren ###
-par(mfrow=c(2,2))
-plot(meAll)
-legend("bottomright", legend=c("AUC", meAll@results[5]), pch=15, pt.cex=1)
-plot(me_4_18)
-summary(meAll)
-str(meAll,2)
-plot(str(meAll))
-
-
-eAll <- evaluate(presences_region, background, meAll, enviData)
-e_4_18 <- evaluate(presences_region, background, me, enviData)
-eAll
-e_4_18
-
-### 3- Auswertung des Modells ####
-## 3.1- Threshold ##
-thr <- threshold(e)
-
-## 3.2- ROC-Kurve und Density-Plot ##
-x11()
-par(mfrow=c(1,2)) 
-plot(eAll, "ROC")
-density(eAll)
-
-x11()
-par(mfrow=c(1,2))
-plot(e, "ROC")
-density(e)
-
-## 3.3- Response Kurven ##
-x11()
-response(meAll)
-response(me)
 
 
 
 
 
 
-### 3.4- 2D Response Kurven ###
-np <- 30
-newdata <- expand.grid(bio10=seq(145, 200, len=np), bio18=seq(0, 240, len=np))
-newdata$pred <- predict(me, newdata)
-
-## 3.4.1 Use threshold to show distribution
-newdata$pred[newdata$pred<thr$sensitivity] <- NA
-
-## 3.4.2- Create classes of site suitability
-cInt <- classIntervals((newdata$pred))
-
-xdiff <-diff(unique(newdata$bio10))[1]
-ydiff <-diff(unique(newdata$bio18))[1]
-
-mypalette <- colorRampPalette(c("lightgreen", "darkgreen"))
-newdata$colors <- findColours(cInt, mypalette(length(cInt$brks)))
-
-par(mfrow=c(1,1), mar=c(5,5,1,1))
-symbols(x=newdata$bio10, y=newdata$bio18, rectangles=matrix(rep(c(xdiff, ydiff), nrow(newdata)), ncol=2, byrow=T), bg=newdata$colors, fg="white", inches=F, xlab="Temperature of warmest quarter (°dC)", ylab="Precipitation of warmest quarter (mm)")
-contour(x=unique(newdata$bio10), y=unique(newdata$bio18), z=matrix(newdata$pred, nrow=np), add=T, levels=unique(round(cInt$brks,1)), labcex = 1.3)
-mtext(species, side=3, line=-1.3, font=3)
-mtext(paste0("AUC = " , round(e@auc, 2), " "), side=1, line=-2.3, adj=1)
-mtext(paste0("Pearson r = " , round(e@cor, 2), " "), side=1, line=-1.3, adj=1)
-
-### Q: Is this response curve reasonable? Why?
 
 
-#### 4- Verbreitungskarte erstellen ####
-pred <- predict(me, enviData)
-plot(pred)
-distr <- pred
-distr[distr < thr$sensitivity] <- NA
-cInt <- classIntervals((newdata$pred))
 
-plot(distr, col=mypalette(10), breaks=cInt$brks, legend=F)
-points(presences_region, pch=16, cex=0.1, col="black")
-plot(region, add=T)
-mtext(species, side=3, line=-1.3, font=3)
-mtext(paste0("AUC = " , round(e@auc, 2), " "), side=1, line=-2.3, adj=1)
-mtext(paste0("Pearson r = " , round(e@cor, 2), " "), side=1, line=-1.3, adj=1)
+
+
+
+
+
+
+
+
+
+
 
 
 ### 5- Climate Change Projektion ####

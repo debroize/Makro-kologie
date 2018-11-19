@@ -1,13 +1,13 @@
 #### SDM auf Basis von GBIF und BIOCLIM f?r ...
 #### Mantis religiosa
-#### Modellbewertung
+#### Kartenerstellung
 rm(list = ls())
 
 #### Start ####
 start_time <- date()	# Startzeit speichern
 
 ### 0.1- Workspace setzen(Pfad in Zwischenablage) ####
- wdname <- "C:/Users/Denis/Documents/Makrooekologie/Workspace"
+wdname <- "C:/Users/Denis/Documents/Makrooekologie/Workspace"
 # wdname <- gsub( "\\\\",  "/",  readClipboard())
 setwd(wdname); getwd(); rm(wdname)
 
@@ -36,7 +36,6 @@ library(gbm)
 library(hier.part)
 
 
-
 ### 1- Daten einlesen  ####
 ## 1.1- Datens?tze einlesen ##
 ## Artdaten
@@ -62,100 +61,40 @@ rm(specDataReg)
 ##BIO17 = Precipitation of Driest Quarter,##BIO18 = Precipitation of Warmest Quarter, ##BIO19 = Precipitation of Coldest Quarter
 
 
-
-
 ## 1.4- Modelle einlesen ####
 maxMods <- readRDS("models/maxent/Mantis_religiosa_europe_MaxEntModels.rds")
 me <- unlist(maxMods)
 
-
-
-#### 2- Contribution ####
-#x11()
-png(paste("figures/Cont_", species, "_", "europe", ".png", sep= ""), width = 1200, height = 800, res = 120)
-par(mfrow=c(3,5))
-for(i in 1:length(me)){
-  plot(me[[i]], main = paste("AUC", me[[i]]@results[5]))
-}
-dev.off()
-
-
-
-### 3- Evaluation ####
-## 3.1- Auswählen welche Modelle betrachtet werden sollen ####
+## 2- Auswählen welche Modelle betrachtet werden sollen ####
 meAll <- me[length(me)]
 meImp <- me[10]
 
 me1   <- me[11]
 
-## 3.2- Evaluieren ####
+## 2.1- Evaluieren ####
 eAll <- evaluate(presences_region, background, meAll, enviData)
 eImp <- evaluate(presences_region, background, meImp, enviData)
 
 e1 <- evaluate(presences_region, background, me1, enviData) ## Gutes Modell mit nur 3 Predictoren (untereinander kaum korreliert)
 
-eAll
-eimp
-e1
-
-### 4- Betrachten der Evaluation ####
-## 4.1- Thresholds ##
+## 2.2- Thresholds ##
 thrAll <- threshold(e)
 thrImp <- threshold(eImp)
 thr1 <- threshold(e1)
 
-
-## 4.2- ROC-Kurven und Density-Plots ##
-x11()
-par(mfrow=c(1,2)) 
-plot(eAll, "ROC")
-density(eAll)
-
-x11()
-par(mfrow=c(1,2))
-plot(eImp, "ROC")
-density(eImp)
-
-x11()
-par(mfrow=c(1,2))
-plot(e1, "ROC")
-density(e1)
-
-
-
-#### 5- Response Kurven ####
-### 5.1- 1D Response Kurven###
-x11()
-response(meAll)
-response(meImp)
-response(me1)
-
-
-
-### 5.2- 2D Response Kurven (in Bearbeitung)###
-np <- 30
-newdata <- expand.grid(bio10=seq(145, 200, len=np), bio18=seq(0, 240, len=np))
-newdata$pred <- predict(me1, newdata)
-
-## 3.4.1 Use threshold to show distribution
-newdata$pred[newdata$pred<thr$sensitivity] <- NA
-
-## 3.4.2- Create classes of site suitability
+#### 3- Verbreitungskarte erstellen ####
+pred <- predict(me1, enviData)
+plot(pred)
+distr <- pred
+distr[distr < thr1$sensitivity] <- NA
 cInt <- classIntervals((newdata$pred))
 
-xdiff <-diff(unique(newdata$bio10))[1]
-ydiff <-diff(unique(newdata$bio18))[1]
-
-mypalette <- colorRampPalette(c("lightgreen", "darkgreen"))
-newdata$colors <- findColours(cInt, mypalette(length(cInt$brks)))
-
-par(mfrow=c(1,1), mar=c(5,5,1,1))
-symbols(x=newdata$bio10, y=newdata$bio18, rectangles=matrix(rep(c(xdiff, ydiff), nrow(newdata)), ncol=2, byrow=T), bg=newdata$colors, fg="white", inches=F, xlab="Temperature of warmest quarter (°dC)", ylab="Precipitation of warmest quarter (mm)")
-contour(x=unique(newdata$bio10), y=unique(newdata$bio18), z=matrix(newdata$pred, nrow=np), add=T, levels=unique(round(cInt$brks,1)), labcex = 1.3)
+plot(distr, col=mypalette(10), breaks=cInt$brks, legend=F)
+points(presences_region, pch=16, cex=0.1, col="black")
+plot(region, add=T)
 mtext(species, side=3, line=-1.3, font=3)
-mtext(paste0("AUC = " , round(e@auc, 2), " "), side=1, line=-2.3, adj=1)
-mtext(paste0("Pearson r = " , round(e@cor, 2), " "), side=1, line=-1.3, adj=1)
-
+mtext(paste0("AUC = " , round(e1@auc, 2), " "), side=1, line=-2.3, adj=1)
+mtext(paste0("Pearson r = " , round(e1@cor, 2), " "), side=1, line=-1.3, adj=1)
 
 
 #### Ende ####
