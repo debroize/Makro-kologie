@@ -2,7 +2,7 @@
 #### Mantis religiosa
 #### Modellbewertung
 rm(list = ls())
-
+#28.11.
 #### Start ####
 start_time <- date()	# Startzeit speichern
 
