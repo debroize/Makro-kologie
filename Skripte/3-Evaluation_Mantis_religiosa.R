@@ -83,24 +83,35 @@ dev.off()
 
 ### 3- Evaluation ####
 ## 3.1- Auswählen welche Modelle betrachtet werden sollen ####
-meAll <- me[length(me)]
-meImp <- me[10]
+meAll <- me[[length(me)]]
 
-me1   <- me[11]
+meSing <- me[[1]]
+  for(i in 1:5){    ## Wählt besten einzelnen Parameter aus
+   if(me[[i]]@results[5] > meSing@results[5]){meSing <- me[[i]]}
+  }  
+meSing
+
+meImp <- me[[10]]
+
+me1   <- me[[11]]
+
 
 ## 3.2- Evaluieren ####
-eAll <- evaluate(presences_region, background, meAll, enviData)
+eAll <- evaluate(presences_region, background, meSing, enviData)
+eSing <- evaluate(presences_region, background, meAll, enviData)
 eImp <- evaluate(presences_region, background, meImp, enviData)
 
 e1 <- evaluate(presences_region, background, me1, enviData) ## Gutes Modell mit nur 3 Predictoren (untereinander kaum korreliert)
 
 eAll
-eimp
+eSing
+eImp
 e1
 
 ### 4- Betrachten der Evaluation ####
 ## 4.1- Thresholds ##
-thrAll <- threshold(e)
+thrAll <- threshold(eAll)
+thrSing <- threshold(eSing)
 thrImp <- threshold(eImp)
 thr1 <- threshold(e1)
 
@@ -108,17 +119,22 @@ thr1 <- threshold(e1)
 ## 4.2- ROC-Kurven und Density-Plots ##
 x11()
 par(mfrow=c(1,2)) 
-plot(eAll, "ROC")
+plot(eAll, "ROC", sub= "eAll")
 density(eAll)
 
 x11()
+par(mfrow=c(1,2)) 
+plot(eSing, "ROC", sub= "eSing")
+density(eSing)
+
+x11()
 par(mfrow=c(1,2))
-plot(eImp, "ROC")
+plot(eImp, "ROC", sub= "eImp")
 density(eImp)
 
 x11()
 par(mfrow=c(1,2))
-plot(e1, "ROC")
+plot(e1, "ROC", sub= "e1")
 density(e1)
 
 
@@ -159,4 +175,4 @@ mtext(paste0("Pearson r = " , round(e@cor, 2), " "), side=1, line=-1.3, adj=1)
 
 
 #### Ende ####
-start_time; date()	## Start; und Endzeit abfragen ## Dauer: 
+start_time; date()	## Start; und Endzeit abfragen ## Dauer: ca. 1 Min

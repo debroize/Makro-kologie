@@ -171,11 +171,11 @@ na.omit(sdmdata)
 
 ### 4.3- Korrelation zwischen verwendeteten Prediktoren ###
 # Scatterplot
-png(paste("data/correlations/scatter", species, "europe.png", sep= "_"), pointsize = 16)
+png(paste("figures/scatter_Imp", species, "europe.png", sep= "_"), pointsize = 16)
 pairs(sdmdata[,c(ContImp)], cex=0.1, fig=TRUE)
 dev.off()
 # Contribution
-png(paste("data/correlations/corplot", species, "europe.png", sep= "_"), pointsize = 16)
+png(paste("figures/corplot_Imp", species, "europe.png", sep= "_"), pointsize = 16)
 corrplot(cor(sdmdata[,c(ContImp)]), type= "lower", diag=FALSE)
 dev.off()
 

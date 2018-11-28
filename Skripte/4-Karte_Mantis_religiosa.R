@@ -66,10 +66,10 @@ maxMods <- readRDS("models/maxent/Mantis_religiosa_europe_MaxEntModels.rds")
 me <- unlist(maxMods)
 
 ## 2- Auswählen welche Modelle betrachtet werden sollen ####
-meAll <- me[length(me)]
-meImp <- me[10]
+meAll <- me[[length(me)]]
+meImp <- me[[10]]
 
-me1   <- me[11]
+me1   <- me[[11]]
 
 ## 2.1- Evaluieren ####
 eAll <- evaluate(presences_region, background, meAll, enviData)
@@ -78,7 +78,7 @@ eImp <- evaluate(presences_region, background, meImp, enviData)
 e1 <- evaluate(presences_region, background, me1, enviData) ## Gutes Modell mit nur 3 Predictoren (untereinander kaum korreliert)
 
 ## 2.2- Thresholds ##
-thrAll <- threshold(e)
+thrAll <- threshold(eAll)
 thrImp <- threshold(eImp)
 thr1 <- threshold(e1)
 
@@ -89,8 +89,10 @@ distr <- pred
 distr[distr < thr1$sensitivity] <- NA
 cInt <- classIntervals((newdata$pred))
 
-plot(distr, col=mypalette(10), breaks=cInt$brks, legend=F)
-points(presences_region, pch=16, cex=0.1, col="black")
+mypalette <- colorRampPalette(c("lightgreen", "darkgreen"))
+
+plot(distr, col=mypalette(10), legend=F)
+#points(presences_region, pch=16, cex=0.1, col="black")
 plot(region, add=T)
 mtext(species, side=3, line=-1.3, font=3)
 mtext(paste0("AUC = " , round(e1@auc, 2), " "), side=1, line=-2.3, adj=1)

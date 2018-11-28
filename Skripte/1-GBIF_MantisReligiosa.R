@@ -138,4 +138,4 @@ rawData <- list(species, region, presences_region, background)
 
 
 #### Ende ####
-start_time; date()	## Start; und Endzeit abfragen ## Dauer: 
+start_time; date()	## Start; und Endzeit abfragen ## Dauer: ca. 10 Minuten
